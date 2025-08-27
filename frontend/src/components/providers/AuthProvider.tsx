@@ -21,16 +21,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check if user is logged in on mount
-    const token = localStorage.getItem('auth_token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token');
+      const savedUser = localStorage.getItem('user');
+      
+      if (token && savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch (error) {
+          console.error('Error parsing saved user:', error);
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+        }
       }
     }
     setLoading(false);
@@ -41,8 +43,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.post<AuthResponse>('/auth/login', { email, password });
       const { access_token, user: userData } = response.data;
       
-      localStorage.setItem('auth_token', access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('auth_token', access_token);
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
       setUser(userData);
     } catch (error) {
       console.error('Login error:', error);
@@ -59,8 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       const { access_token, user: userData } = response.data;
       
-      localStorage.setItem('auth_token', access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('auth_token', access_token);
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
       setUser(userData);
     } catch (error) {
       console.error('Registration error:', error);
@@ -69,8 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+    }
     setUser(null);
   };
 
@@ -78,7 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
     }
   };
 

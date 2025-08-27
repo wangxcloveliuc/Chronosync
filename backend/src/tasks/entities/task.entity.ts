@@ -39,10 +39,10 @@ export class Task {
   })
   priority: TaskPriority;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   dueDate: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   reminderTime: Date | null;
 
   @CreateDateColumn()
@@ -51,7 +51,7 @@ export class Task {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   completedAt: Date | null;
 
   @ManyToOne(() => User, user => user.tasks, { onDelete: 'CASCADE' })
