@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import NavBar from '@/components/NavBar';
 import api from '@/lib/api';
 import { User } from '@/types';
 import { PasswordChangeForm } from '@/components/auth/PasswordChangeForm';
@@ -77,36 +78,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">User Profile</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => router.push('/analytics')}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                Analytics
-              </button>
-              <button
-                onClick={() => router.push('/calendar')}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                Calendar
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+  <NavBar title="User Profile" />
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">

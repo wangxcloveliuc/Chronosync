@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import NavBar from '@/components/NavBar';
 import { useTasks } from '@/hooks/useTasks';
 import { AnalyticsCharts } from '@/components/analytics/AnalyticsCharts';
 
@@ -33,44 +34,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <h1 className="text-xl font-semibold text-gray-900">Analytics Dashboard</h1>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => router.push('/calendar')}
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Calendar
-              </button>
-              <button
-                onClick={() => router.push('/profile')}
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Profile
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('auth_token');
-                  localStorage.removeItem('user');
-                  router.push('/auth/login');
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+  <NavBar title="Analytics Dashboard" />
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
