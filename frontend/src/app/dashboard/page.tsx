@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTasks } from '@/hooks/useTasks';
+import { useNotifications } from '@/hooks/useNotifications';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { StatsCards } from '@/components/tasks/StatsCards';
-import { Task, TaskStatus } from '@/types';
+import { Task, TaskStatus, CreateTaskData, UpdateTaskData } from '@/types';
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<{ status?: TaskStatus; search?: string }>({});
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const router = useRouter();
 
   const {
@@ -26,6 +29,12 @@ export default function DashboardPage() {
     deleteTask,
     setError,
   } = useTasks();
+
+  // Initialize notifications
+  const { hasPermission, isSupported, requestPermission } = useNotifications({
+    tasks,
+    enabled: notificationsEnabled,
+  });
 
   useEffect(() => {
     // Simple auth check
@@ -62,8 +71,21 @@ export default function DashboardPage() {
   };
 
   const handleEditTask = (task: Task) => {
-    // For now, just show an alert. In a full implementation, this would open an edit form
-    alert(`Edit task: ${task.title}`);
+    setEditingTask(task);
+    setShowTaskForm(true);
+  };
+
+  const handleSubmitTask = async (taskData: CreateTaskData | UpdateTaskData) => {
+    if (editingTask) {
+      await updateTask(editingTask.id, taskData);
+    } else {
+      await createTask(taskData as CreateTaskData);
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowTaskForm(false);
+    setEditingTask(null);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,16 +111,61 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <h1 className="text-xl font-semibold text-gray-900">Chronosync Dashboard</h1>
-            <button
-              onClick={() => {
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('user');
-                router.push('/auth/login');
-              }}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Logout
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Notification Settings */}
+              {isSupported && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                    className={`p-2 rounded-md text-sm ${
+                      notificationsEnabled && hasPermission
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                    title={`Notifications ${notificationsEnabled ? 'enabled' : 'disabled'}`}
+                  >
+                    🔔
+                  </button>
+                  {notificationsEnabled && !hasPermission && (
+                    <button
+                      onClick={requestPermission}
+                      className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-md hover:bg-blue-200"
+                    >
+                      Enable
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              <button
+                onClick={() => router.push('/calendar')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Calendar
+              </button>
+              <button
+                onClick={() => router.push('/analytics')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Analytics
+              </button>
+              <button
+                onClick={() => router.push('/profile')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Profile
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('auth_token');
+                  localStorage.removeItem('user');
+                  router.push('/auth/login');
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -106,7 +173,31 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* Stats Cards */}
-          <StatsCards stats={stats} />
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Task Overview</h2>
+              {isSupported && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <span className="text-gray-600">Reminders:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    notificationsEnabled && hasPermission
+                      ? 'bg-green-100 text-green-800'
+                      : notificationsEnabled && !hasPermission
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {notificationsEnabled && hasPermission
+                      ? 'Active'
+                      : notificationsEnabled && !hasPermission
+                      ? 'Pending Permission'
+                      : 'Disabled'
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
+            <StatsCards stats={stats} />
+          </div>
 
           {/* Error Message */}
           {error && (
@@ -126,7 +217,10 @@ export default function DashboardPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setShowTaskForm(true)}
+                  onClick={() => {
+                    setEditingTask(null);
+                    setShowTaskForm(true);
+                  }}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   + New Task
@@ -208,9 +302,11 @@ export default function DashboardPage() {
       {/* Task Form Modal */}
       {showTaskForm && (
         <TaskForm
-          onSubmit={createTask}
-          onCancel={() => setShowTaskForm(false)}
+          onSubmit={handleSubmitTask}
+          onCancel={handleCancelForm}
           categories={categories}
+          editTask={editingTask || undefined}
+          mode={editingTask ? 'edit' : 'create'}
         />
       )}
     </div>
