@@ -97,3 +97,35 @@ export interface UpdateCategoryData {
   description?: string;
   color?: string;
 }
+
+export interface TaskShare {
+  id: number;
+  shareToken: string;
+  shareType: 'public_link' | 'user_share';
+  sharedWithUserId?: number;
+  isActive: boolean;
+  expiresAt?: string;
+  createdAt: string;
+  task: Task;
+  sharedWithUser?: User;
+}
+
+export interface CategoryCollaborator {
+  id: number;
+  role: 'viewer' | 'editor' | 'admin';
+  isActive: boolean;
+  createdAt: string;
+  user: User;
+  invitedBy: User;
+}
+
+export interface CreateTaskShareData {
+  shareType: 'public_link' | 'user_share';
+  sharedWithUserId?: number;
+  expiresAt?: string;
+}
+
+export interface CreateCollaboratorData {
+  userId: number;
+  role: 'viewer' | 'editor' | 'admin';
+}
