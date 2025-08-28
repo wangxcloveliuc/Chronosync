@@ -27,6 +27,12 @@ export class UsersService {
     });
   }
 
+  // Return the user including the password hash. Use this only when the
+  // password is required (e.g. during authentication or password change).
+  async findByIdWithPassword(id: number): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id } });
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User | null> {
     await this.userRepository.update(id, updateUserDto);
     return this.findById(id);

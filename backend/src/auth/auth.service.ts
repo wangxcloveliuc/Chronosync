@@ -63,7 +63,8 @@ export class AuthService {
   }
 
   async changePassword(userId: number, changePasswordDto: ChangePasswordDto) {
-    const user = await this.usersService.findById(userId);
+  // load user including password hash for verification
+  const user = await this.usersService.findByIdWithPassword(userId);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
