@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTasks } from '@/hooks/useTasks';
+import { useNotifications } from '@/hooks/useNotifications';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { StatsCards } from '@/components/tasks/StatsCards';
@@ -13,6 +14,7 @@ export default function DashboardPage() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<{ status?: TaskStatus; search?: string }>({});
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const router = useRouter();
 
   const {
@@ -27,6 +29,12 @@ export default function DashboardPage() {
     deleteTask,
     setError,
   } = useTasks();
+
+  // Initialize notifications
+  const { hasPermission, isSupported, requestPermission } = useNotifications({
+    tasks,
+    enabled: notificationsEnabled,
+  });
 
   useEffect(() => {
     // Simple auth check
@@ -104,6 +112,31 @@ export default function DashboardPage() {
           <div className="flex justify-between h-16 items-center">
             <h1 className="text-xl font-semibold text-gray-900">Chronosync Dashboard</h1>
             <div className="flex items-center space-x-4">
+              {/* Notification Settings */}
+              {isSupported && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                    className={`p-2 rounded-md text-sm ${
+                      notificationsEnabled && hasPermission
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                    title={`Notifications ${notificationsEnabled ? 'enabled' : 'disabled'}`}
+                  >
+                    🔔
+                  </button>
+                  {notificationsEnabled && !hasPermission && (
+                    <button
+                      onClick={requestPermission}
+                      className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-md hover:bg-blue-200"
+                    >
+                      Enable
+                    </button>
+                  )}
+                </div>
+              )}
+              
               <button
                 onClick={() => router.push('/calendar')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
@@ -140,7 +173,31 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* Stats Cards */}
-          <StatsCards stats={stats} />
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Task Overview</h2>
+              {isSupported && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <span className="text-gray-600">Reminders:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    notificationsEnabled && hasPermission
+                      ? 'bg-green-100 text-green-800'
+                      : notificationsEnabled && !hasPermission
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {notificationsEnabled && hasPermission
+                      ? 'Active'
+                      : notificationsEnabled && !hasPermission
+                      ? 'Pending Permission'
+                      : 'Disabled'
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
+            <StatsCards stats={stats} />
+          </div>
 
           {/* Error Message */}
           {error && (
