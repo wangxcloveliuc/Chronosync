@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto, UpdateTaskDto, CreateCategoryDto, UpdateCategoryDto } from './dto/task.dto';
+import { CreateTaskDto, UpdateTaskDto, CreateCategoryDto, UpdateCategoryDto, CreateTaskShareDto, CreateCategoryCollaboratorDto } from './dto/task.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TaskStatus } from './entities/task.entity';
 
@@ -93,5 +93,65 @@ export class TasksController {
   @Delete('categories/:id')
   deleteCategory(@Param('id') id: string, @Request() req) {
     return this.tasksService.deleteCategory(+id, req.user.id);
+  }
+
+  // Task sharing endpoints
+  @Post(':id/share')
+  createTaskShare(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() createTaskShareDto: CreateTaskShareDto,
+  ) {
+    return this.tasksService.createTaskShare(+id, req.user.id, createTaskShareDto);
+  }
+
+  @Get('shares')
+  getTaskShares(@Request() req) {
+    return this.tasksService.getTaskShares(req.user.id);
+  }
+
+  @Delete('shares/:id')
+  revokeTaskShare(@Param('id') id: string, @Request() req) {
+    return this.tasksService.revokeTaskShare(+id, req.user.id);
+  }
+
+  // Category collaboration endpoints
+  @Post('categories/:id/collaborators')
+  addCategoryCollaborator(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() createCollaboratorDto: CreateCategoryCollaboratorDto,
+  ) {
+    const dto = { ...createCollaboratorDto, categoryId: +id };
+    return this.tasksService.addCategoryCollaborator(req.user.id, dto);
+  }
+
+  @Get('categories/:id/collaborators')
+  getCategoryCollaborators(@Param('id') id: string, @Request() req) {
+    return this.tasksService.getCategoryCollaborators(+id, req.user.id);
+  }
+
+  @Get('categories/shared')
+  getSharedCategories(@Request() req) {
+    return this.tasksService.getSharedCategories(req.user.id);
+  }
+
+  @Delete('categories/:categoryId/collaborators/:userId')
+  removeCategoryCollaborator(
+    @Param('categoryId') categoryId: string,
+    @Param('userId') userId: string,
+    @Request() req,
+  ) {
+    return this.tasksService.removeCategoryCollaborator(+categoryId, +userId, req.user.id);
+  }
+
+  @Patch('categories/:categoryId/collaborators/:userId')
+  updateCategoryCollaboratorRole(
+    @Param('categoryId') categoryId: string,
+    @Param('userId') userId: string,
+    @Body() body: { role: 'viewer' | 'editor' | 'admin' },
+    @Request() req,
+  ) {
+    return this.tasksService.updateCategoryCollaboratorRole(+categoryId, +userId, body.role as any, req.user.id);
   }
 }

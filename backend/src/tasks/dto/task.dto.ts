@@ -82,3 +82,27 @@ export class UpdateCategoryDto {
   @IsString()
   color?: string;
 }
+
+export class CreateTaskShareDto {
+  @IsEnum(['public_link', 'user_share'])
+  shareType: 'public_link' | 'user_share';
+
+  @IsOptional()
+  @IsNumber()
+  sharedWithUserId?: number;
+
+  @IsOptional()
+  @IsDateString()
+  expiresAt?: string;
+}
+
+export class CreateCategoryCollaboratorDto {
+  @IsNumber()
+  categoryId: number;
+
+  @IsNumber()
+  userId: number;
+
+  @IsEnum(['viewer', 'editor', 'admin'])
+  role: 'viewer' | 'editor' | 'admin';
+}

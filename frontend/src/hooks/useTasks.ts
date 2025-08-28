@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { Task, Category, TaskStats, CreateTaskData, UpdateTaskData, CreateCategoryData, TaskStatus } from '@/types';
+import { Task, Category, TaskStats, CreateTaskData, UpdateTaskData, CreateCategoryData, TaskStatus, TaskPriority } from '@/types';
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -17,12 +17,39 @@ export const useTasks = () => {
     const todo = taskList.filter(task => task.status === TaskStatus.TODO).length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+    // Calculate priority breakdown
+    const highTasks = taskList.filter(task => task.priority === TaskPriority.HIGH);
+    const mediumTasks = taskList.filter(task => task.priority === TaskPriority.MEDIUM);
+    const lowTasks = taskList.filter(task => task.priority === TaskPriority.LOW);
+
+    const highCompleted = highTasks.filter(task => task.status === TaskStatus.COMPLETED).length;
+    const mediumCompleted = mediumTasks.filter(task => task.status === TaskStatus.COMPLETED).length;
+    const lowCompleted = lowTasks.filter(task => task.status === TaskStatus.COMPLETED).length;
+
     return {
       total,
       completed,
       inProgress,
       todo,
       completionRate,
+      priorityBreakdown: {
+        high: { total: highTasks.length, completed: highCompleted },
+        medium: { total: mediumTasks.length, completed: mediumCompleted },
+        low: { total: lowTasks.length, completed: lowCompleted },
+      },
+      completionTime: {
+        averageCompletionHours: 0,
+        byPriority: {
+          high: { averageHours: 0, count: 0 },
+          medium: { averageHours: 0, count: 0 },
+          low: { averageHours: 0, count: 0 },
+        }
+      },
+      productivity: {
+        highPriorityCompletionRate: highTasks.length > 0 ? Math.round((highCompleted / highTasks.length) * 100) : 0,
+        mediumPriorityCompletionRate: mediumTasks.length > 0 ? Math.round((mediumCompleted / mediumTasks.length) * 100) : 0,
+        lowPriorityCompletionRate: lowTasks.length > 0 ? Math.round((lowCompleted / lowTasks.length) * 100) : 0,
+      }
     };
   };
 
