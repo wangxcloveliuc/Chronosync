@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { CreateTaskData, TaskPriority, Category } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { CreateTaskData, TaskPriority, Category, Task, UpdateTaskData } from '@/types';
 
 interface TaskFormProps {
-  onSubmit: (taskData: CreateTaskData) => Promise<void>;
+  onSubmit: (taskData: CreateTaskData | UpdateTaskData) => Promise<void>;
   onCancel: () => void;
   categories: Category[];
+  editTask?: Task;
+  mode?: 'create' | 'edit';
 }
 
-export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, onCancel, categories }) => {
+export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, onCancel, categories, editTask, mode = 'create' }) => {
   const [formData, setFormData] = useState<CreateTaskData>({
     title: '',
     description: '',
@@ -18,22 +20,38 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, onCancel, categori
   });
   const [loading, setLoading] = useState(false);
 
+  // Initialize form data when editing
+  useEffect(() => {
+    if (editTask && mode === 'edit') {
+      setFormData({
+        title: editTask.title,
+        description: editTask.description || '',
+        priority: editTask.priority,
+        dueDate: editTask.dueDate ? editTask.dueDate.slice(0, 16) : '',
+        reminderTime: editTask.reminderTime ? editTask.reminderTime.slice(0, 16) : '',
+        categoryId: editTask.categoryId,
+      });
+    }
+  }, [editTask, mode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await onSubmit(formData);
-      setFormData({
-        title: '',
-        description: '',
-        priority: TaskPriority.MEDIUM,
-        dueDate: '',
-        reminderTime: '',
-        categoryId: undefined,
-      });
+      if (mode === 'create') {
+        setFormData({
+          title: '',
+          description: '',
+          priority: TaskPriority.MEDIUM,
+          dueDate: '',
+          reminderTime: '',
+          categoryId: undefined,
+        });
+      }
       onCancel();
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error(`Error ${mode === 'edit' ? 'updating' : 'creating'} task:`, error);
     } finally {
       setLoading(false);
     }
@@ -51,7 +69,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, onCancel, categori
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Task</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            {mode === 'edit' ? 'Edit Task' : 'Create New Task'}
+          </h2>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -156,7 +176,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, onCancel, categori
                 disabled={loading}
                 className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {loading ? 'Creating...' : 'Create Task'}
+                {loading ? (mode === 'edit' ? 'Updating...' : 'Creating...') : (mode === 'edit' ? 'Update Task' : 'Create Task')}
               </button>
               <button
                 type="button"

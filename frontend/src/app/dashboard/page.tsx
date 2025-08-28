@@ -6,11 +6,12 @@ import { useTasks } from '@/hooks/useTasks';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { StatsCards } from '@/components/tasks/StatsCards';
-import { Task, TaskStatus } from '@/types';
+import { Task, TaskStatus, CreateTaskData, UpdateTaskData } from '@/types';
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<{ status?: TaskStatus; search?: string }>({});
   const router = useRouter();
 
@@ -62,8 +63,21 @@ export default function DashboardPage() {
   };
 
   const handleEditTask = (task: Task) => {
-    // For now, just show an alert. In a full implementation, this would open an edit form
-    alert(`Edit task: ${task.title}`);
+    setEditingTask(task);
+    setShowTaskForm(true);
+  };
+
+  const handleSubmitTask = async (taskData: CreateTaskData | UpdateTaskData) => {
+    if (editingTask) {
+      await updateTask(editingTask.id, taskData);
+    } else {
+      await createTask(taskData as CreateTaskData);
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowTaskForm(false);
+    setEditingTask(null);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,7 +140,10 @@ export default function DashboardPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setShowTaskForm(true)}
+                  onClick={() => {
+                    setEditingTask(null);
+                    setShowTaskForm(true);
+                  }}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   + New Task
@@ -208,9 +225,11 @@ export default function DashboardPage() {
       {/* Task Form Modal */}
       {showTaskForm && (
         <TaskForm
-          onSubmit={createTask}
-          onCancel={() => setShowTaskForm(false)}
+          onSubmit={handleSubmitTask}
+          onCancel={handleCancelForm}
           categories={categories}
+          editTask={editingTask || undefined}
+          mode={editingTask ? 'edit' : 'create'}
         />
       )}
     </div>
