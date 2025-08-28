@@ -85,6 +85,12 @@ export default function CalendarPage() {
                 Dashboard
               </button>
               <button
+                onClick={() => router.push('/analytics')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Analytics
+              </button>
+              <button
                 onClick={() => router.push('/profile')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >

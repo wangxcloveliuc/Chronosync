@@ -92,6 +92,12 @@ export default function ProfilePage() {
                 Dashboard
               </button>
               <button
+                onClick={() => router.push('/analytics')}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Analytics
+              </button>
+              <button
                 onClick={() => router.push('/calendar')}
                 className="text-blue-600 hover:text-blue-800"
               >
