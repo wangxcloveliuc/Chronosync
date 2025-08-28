@@ -84,12 +84,20 @@ export default function ProfilePage() {
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">User Profile</h1>
             </div>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="text-blue-600 hover:text-blue-800"
-            >
-              Back to Dashboard
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => router.push('/calendar')}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Calendar
+              </button>
+            </div>
           </div>
         </div>
       </nav>

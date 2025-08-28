@@ -105,6 +105,12 @@ export default function DashboardPage() {
             <h1 className="text-xl font-semibold text-gray-900">Chronosync Dashboard</h1>
             <div className="flex items-center space-x-4">
               <button
+                onClick={() => router.push('/calendar')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Calendar
+              </button>
+              <button
                 onClick={() => router.push('/profile')}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
