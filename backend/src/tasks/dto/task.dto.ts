@@ -1,5 +1,7 @@
-import { IsString, IsOptional, IsEnum, IsDateString, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsDateString, IsNumber, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { TaskStatus, TaskPriority } from '../entities/task.entity';
+import { DependencyType } from '../entities/task-dependency.entity';
 
 export class CreateTaskDto {
   @IsString()
@@ -24,6 +26,15 @@ export class CreateTaskDto {
   @IsOptional()
   @IsNumber()
   categoryId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  parentTaskId?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }
 
 export class UpdateTaskDto {
@@ -54,6 +65,15 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsNumber()
   categoryId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  parentTaskId?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }
 
 export class CreateCategoryDto {
@@ -105,4 +125,47 @@ export class CreateCategoryCollaboratorDto {
 
   @IsEnum(['viewer', 'editor', 'admin'])
   role: 'viewer' | 'editor' | 'admin';
+}
+
+export class CreateTaskDependencyDto {
+  @IsNumber()
+  predecessorTaskId: number;
+
+  @IsNumber()
+  successorTaskId: number;
+
+  @IsOptional()
+  @IsEnum(DependencyType)
+  dependencyType?: DependencyType;
+
+  @IsOptional()
+  @IsNumber()
+  lag?: number;
+}
+
+export class CreateTaskTagDto {
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class UpdateTaskTagDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

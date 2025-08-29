@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { Task, Category, TaskStats, CreateTaskData, UpdateTaskData, CreateCategoryData, TaskStatus, TaskPriority } from '@/types';
+import { Task, Category, TaskStats, CreateTaskData, UpdateTaskData, CreateCategoryData, TaskStatus, TaskPriority, TaskTag, TaskDependency, CreateTaskTagData, UpdateTaskTagData, CreateTaskDependencyData } from '@/types';
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<TaskTag[]>([]);
   const [stats, setStats] = useState<TaskStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,13 +54,14 @@ export const useTasks = () => {
     };
   };
 
-  const fetchTasks = async (filters?: { status?: string; categoryId?: number; search?: string }) => {
+  const fetchTasks = async (filters?: { status?: string; categoryId?: number; search?: string; tags?: string[] }) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       if (filters?.status) params.append('status', filters.status);
       if (filters?.categoryId) params.append('categoryId', filters.categoryId.toString());
       if (filters?.search) params.append('search', filters.search);
+      if (filters?.tags && filters.tags.length > 0) params.append('tags', filters.tags.join(','));
       
       const response = await api.get(`/tasks?${params.toString()}`);
       setTasks(response.data);
@@ -149,25 +151,119 @@ export const useTasks = () => {
     }
   };
 
+  const fetchTags = async () => {
+    try {
+      const response = await api.get('/tasks/tags');
+      setTags(response.data);
+    } catch (err) {
+      console.error('Error fetching tags:', err);
+    }
+  };
+
+  const createTag = async (tagData: CreateTaskTagData) => {
+    try {
+      const response = await api.post('/tasks/tags', tagData);
+      setTags(prev => [...prev, response.data]);
+      return response.data;
+    } catch (err) {
+      setError('Failed to create tag');
+      throw err;
+    }
+  };
+
+  const updateTag = async (tagId: number, tagData: UpdateTaskTagData) => {
+    try {
+      const response = await api.patch(`/tasks/tags/${tagId}`, tagData);
+      setTags(prev => prev.map(tag => tag.id === tagId ? response.data : tag));
+      return response.data;
+    } catch (err) {
+      setError('Failed to update tag');
+      throw err;
+    }
+  };
+
+  const deleteTag = async (tagId: number) => {
+    try {
+      await api.delete(`/tasks/tags/${tagId}`);
+      setTags(prev => prev.filter(tag => tag.id !== tagId));
+    } catch (err) {
+      setError('Failed to delete tag');
+      throw err;
+    }
+  };
+
+  const createDependency = async (taskId: number, dependencyData: CreateTaskDependencyData) => {
+    try {
+      const response = await api.post(`/tasks/${taskId}/dependencies`, dependencyData);
+      // Refresh tasks to get updated dependency information
+      await fetchTasks();
+      return response.data;
+    } catch (err) {
+      setError('Failed to create dependency');
+      throw err;
+    }
+  };
+
+  const getDependencies = async (taskId: number) => {
+    try {
+      const response = await api.get(`/tasks/${taskId}/dependencies`);
+      return response.data;
+    } catch (err) {
+      setError('Failed to fetch dependencies');
+      throw err;
+    }
+  };
+
+  const deleteDependency = async (dependencyId: number) => {
+    try {
+      await api.delete(`/tasks/dependencies/${dependencyId}`);
+      // Refresh tasks to get updated dependency information
+      await fetchTasks();
+    } catch (err) {
+      setError('Failed to delete dependency');
+      throw err;
+    }
+  };
+
+  const getSubTasks = async (parentTaskId: number) => {
+    try {
+      const response = await api.get(`/tasks/${parentTaskId}/sub-tasks`);
+      return response.data;
+    } catch (err) {
+      setError('Failed to fetch sub-tasks');
+      throw err;
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchCategories();
     fetchStats();
+    fetchTags();
   }, []);
 
   return {
     tasks,
     categories,
+    tags,
     stats,
     loading,
     error,
     fetchTasks,
     fetchCategories,
     fetchStats,
+    fetchTags,
     createTask,
     updateTask,
     deleteTask,
     createCategory,
+    createTag,
+    updateTag,
+    deleteTag,
+    createDependency,
+    getDependencies,
+    deleteDependency,
+    getSubTasks,
     setError,
   };
 };

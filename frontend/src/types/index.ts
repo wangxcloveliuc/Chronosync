@@ -18,6 +18,13 @@ export interface Task {
   completedAt?: string;
   category?: Category;
   categoryId?: number;
+  parentTask?: Task;
+  parentTaskId?: number;
+  subTasks?: Task[];
+  tags?: TaskTag[];
+  predecessorDependencies?: TaskDependency[];
+  successorDependencies?: TaskDependency[];
+  progress: number;
 }
 
 export interface Category {
@@ -80,6 +87,8 @@ export interface CreateTaskData {
   dueDate?: string;
   reminderTime?: string;
   categoryId?: number;
+  parentTaskId?: number;
+  tags?: string[];
 }
 
 export interface UpdateTaskData extends Partial<CreateTaskData> {
@@ -128,4 +137,50 @@ export interface CreateTaskShareData {
 export interface CreateCollaboratorData {
   userId: number;
   role: 'viewer' | 'editor' | 'admin';
+}
+
+export interface TaskTag {
+  id: number;
+  name: string;
+  color?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskDependency {
+  id: number;
+  dependencyType: DependencyType;
+  lag?: number;
+  createdAt: string;
+  predecessorTask: Task;
+  successorTask: Task;
+  predecessorTaskId: number;
+  successorTaskId: number;
+}
+
+export enum DependencyType {
+  FINISH_TO_START = 'finish_to_start',
+  START_TO_START = 'start_to_start',
+  FINISH_TO_FINISH = 'finish_to_finish',
+  START_TO_FINISH = 'start_to_finish'
+}
+
+export interface CreateTaskTagData {
+  name: string;
+  color?: string;
+  description?: string;
+}
+
+export interface UpdateTaskTagData {
+  name?: string;
+  color?: string;
+  description?: string;
+}
+
+export interface CreateTaskDependencyData {
+  predecessorTaskId: number;
+  successorTaskId: number;
+  dependencyType?: DependencyType;
+  lag?: number;
 }
