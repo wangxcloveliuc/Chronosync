@@ -12,6 +12,7 @@ export default function AnalyticsPage() {
 
   const {
     tasks,
+    stats,
     loading: tasksLoading,
   } = useTasks();
 
@@ -65,7 +66,7 @@ export default function AnalyticsPage() {
               </button>
             </div>
           ) : (
-            <AnalyticsCharts tasks={tasks} />
+            <AnalyticsCharts tasks={tasks} stats={stats} />
           )}
         </div>
       </main>

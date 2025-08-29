@@ -1,13 +1,15 @@
 import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Task, TaskStatus, TaskPriority } from '@/types';
+import { Task, TaskStatus, TaskPriority, TaskStats } from '@/types';
 import { format, subDays, eachDayOfInterval, startOfWeek, endOfWeek } from 'date-fns';
+import { ProductivityReport } from './ProductivityReport';
 
 interface AnalyticsChartsProps {
   tasks: Task[];
+  stats?: TaskStats | null;
 }
 
-export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ tasks }) => {
+export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ tasks, stats }) => {
   // Status distribution data for pie chart
   const statusData = useMemo(() => {
     const statusCounts = {
@@ -236,6 +238,9 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ tasks }) => {
           </div>
         </div>
       </div>
+
+      {/* Enhanced Productivity Report */}
+      <ProductivityReport stats={stats || null} />
     </div>
   );
 };
