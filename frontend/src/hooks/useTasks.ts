@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { Task, Category, TaskStats, CreateTaskData, UpdateTaskData, CreateCategoryData, TaskStatus, TaskPriority, TaskTag, TaskDependency, CreateTaskTagData, UpdateTaskTagData, CreateTaskDependencyData } from '@/types';
+import { Task, Category, TaskStats, CreateTaskData, UpdateTaskData, CreateCategoryData, TaskStatus, TaskPriority, TaskTag, CreateTaskTagData, UpdateTaskTagData, CreateTaskDependencyData } from '@/types';
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);

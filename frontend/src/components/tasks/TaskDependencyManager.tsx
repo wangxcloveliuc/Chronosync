@@ -108,7 +108,7 @@ export const TaskDependencyManager: React.FC<TaskDependencyManagerProps> = ({ ta
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">
-            Dependencies for "{task.title}"
+            Dependencies for &quot;{task.title}&quot;
           </h2>
           <button
             onClick={onClose}
@@ -162,7 +162,7 @@ export const TaskDependencyManager: React.FC<TaskDependencyManagerProps> = ({ ta
                     ))}
                   </select>
                   <div className="text-xs text-gray-500 mt-1">
-                    This task must be completed before "{task.title}" can start
+                    This task must be completed before &quot;{task.title}&quot; can start
                   </div>
                 </div>
                 
@@ -243,7 +243,7 @@ export const TaskDependencyManager: React.FC<TaskDependencyManagerProps> = ({ ta
                           </div>
                           <div className="text-sm text-gray-600">
                             {getDependencyTypeLabel(dep.dependencyType)}
-                            {dep.lag > 0 && ` (${dep.lag}h lag)`}
+                            {dep.lag && dep.lag > 0 && ` (${dep.lag}h lag)`}
                           </div>
                           <div className={`text-xs px-2 py-1 rounded inline-block mt-1 ${
                             dep.predecessorTask.status === 'completed' 
@@ -293,7 +293,7 @@ export const TaskDependencyManager: React.FC<TaskDependencyManagerProps> = ({ ta
                           </div>
                           <div className="text-sm text-gray-600">
                             {getDependencyTypeLabel(dep.dependencyType)}
-                            {dep.lag > 0 && ` (${dep.lag}h lag)`}
+                            {dep.lag && dep.lag > 0 && ` (${dep.lag}h lag)`}
                           </div>
                           <div className={`text-xs px-2 py-1 rounded inline-block mt-1 ${
                             dep.successorTask.status === 'completed' 

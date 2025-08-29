@@ -91,7 +91,7 @@ export const SubTaskViewer: React.FC<SubTaskViewerProps> = ({ parentTask, onClos
         <div className="flex justify-between items-center p-6 border-b">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
-              Sub-tasks for "{parentTask.title}"
+              Sub-tasks for &quot;{parentTask.title}&quot;
             </h2>
             <div className="text-sm text-gray-500 mt-1">
               Progress: {calculateProgress()}% ({subTasks.filter(t => t.status === TaskStatus.COMPLETED).length}/{subTasks.length} completed)

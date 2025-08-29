@@ -19,6 +19,7 @@ export default function CalendarPage() {
   const {
     tasks,
     categories,
+    tags,
     loading: tasksLoading,
     createTask,
     updateTask,
@@ -106,6 +107,8 @@ export default function CalendarPage() {
           onSubmit={handleSubmitTask}
           onCancel={handleCancelForm}
           categories={categories}
+          tasks={tasks}
+          tags={tags}
           editTask={editingTask || undefined}
           mode={editingTask ? 'edit' : 'create'}
         />
