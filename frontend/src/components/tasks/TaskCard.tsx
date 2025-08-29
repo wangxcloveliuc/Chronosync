@@ -7,6 +7,7 @@ interface TaskCardProps {
   onStatusChange: (taskId: number, status: TaskStatus) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: number) => void;
+  onShare?: (task: Task) => void;
 }
 
 const getPriorityColor = (priority: TaskPriority) => {
@@ -35,7 +36,7 @@ const getStatusColor = (status: TaskStatus) => {
   }
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onStatusChange, onEdit, onDelete }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onStatusChange, onEdit, onDelete, onShare }) => {
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onStatusChange(task.id, e.target.value as TaskStatus);
   };
@@ -51,6 +52,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onStatusChange, onEdit
           >
             Edit
           </button>
+          {onShare && (
+            <button
+              onClick={() => onShare(task)}
+              className="text-purple-600 hover:text-purple-800 text-sm"
+            >
+              Share
+            </button>
+          )}
           <button
             onClick={() => onDelete(task.id)}
             className="text-red-600 hover:text-red-800 text-sm"

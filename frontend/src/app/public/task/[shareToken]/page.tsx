@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Task } from '@/types';
+import api from '@/lib/api';
 
 export default function SharedTaskPage() {
   const [task, setTask] = useState<Task | null>(null);
@@ -15,13 +16,8 @@ export default function SharedTaskPage() {
     const fetchSharedTask = async () => {
       try {
         const shareToken = params.shareToken as string;
-        const response = await fetch(`/api/public/tasks/shared/${shareToken}`);
-        
-        if (!response.ok) {
-          throw new Error('Task not found or expired');
-        }
-        
-        const taskData = await response.json();
+        const response = await api.get(`/public/tasks/shared/${shareToken}`);
+        const taskData = response.data;
         setTask(taskData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load shared task');

@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto, UpdateTaskDto, CreateCategoryDto, UpdateCategoryDto, CreateTaskShareDto, CreateCategoryCollaboratorDto } from './dto/task.dto';
@@ -47,22 +48,22 @@ export class TasksController {
   }
 
   @Get(':id')
-  findTaskById(@Param('id') id: string, @Request() req) {
-    return this.tasksService.findTaskById(+id, req.user.id);
+  findTaskById(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.findTaskById(id, req.user.id);
   }
 
   @Patch(':id')
   updateTask(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Request() req,
     @Body() updateTaskDto: UpdateTaskDto,
   ) {
-    return this.tasksService.updateTask(+id, req.user.id, updateTaskDto);
+    return this.tasksService.updateTask(id, req.user.id, updateTaskDto);
   }
 
   @Delete(':id')
-  deleteTask(@Param('id') id: string, @Request() req) {
-    return this.tasksService.deleteTask(+id, req.user.id);
+  deleteTask(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.deleteTask(id, req.user.id);
   }
 
   // Category endpoints
@@ -77,32 +78,32 @@ export class TasksController {
   }
 
   @Get('categories/:id')
-  findCategoryById(@Param('id') id: string, @Request() req) {
-    return this.tasksService.findCategoryById(+id, req.user.id);
+  findCategoryById(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.findCategoryById(id, req.user.id);
   }
 
   @Patch('categories/:id')
   updateCategory(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Request() req,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
-    return this.tasksService.updateCategory(+id, req.user.id, updateCategoryDto);
+    return this.tasksService.updateCategory(id, req.user.id, updateCategoryDto);
   }
 
   @Delete('categories/:id')
-  deleteCategory(@Param('id') id: string, @Request() req) {
-    return this.tasksService.deleteCategory(+id, req.user.id);
+  deleteCategory(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.deleteCategory(id, req.user.id);
   }
 
   // Task sharing endpoints
   @Post(':id/share')
   createTaskShare(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Request() req,
     @Body() createTaskShareDto: CreateTaskShareDto,
   ) {
-    return this.tasksService.createTaskShare(+id, req.user.id, createTaskShareDto);
+    return this.tasksService.createTaskShare(id, req.user.id, createTaskShareDto);
   }
 
   @Get('shares')
@@ -111,24 +112,24 @@ export class TasksController {
   }
 
   @Delete('shares/:id')
-  revokeTaskShare(@Param('id') id: string, @Request() req) {
-    return this.tasksService.revokeTaskShare(+id, req.user.id);
+  revokeTaskShare(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.revokeTaskShare(id, req.user.id);
   }
 
   // Category collaboration endpoints
   @Post('categories/:id/collaborators')
   addCategoryCollaborator(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Request() req,
     @Body() createCollaboratorDto: CreateCategoryCollaboratorDto,
   ) {
-    const dto = { ...createCollaboratorDto, categoryId: +id };
+    const dto = { ...createCollaboratorDto, categoryId: id };
     return this.tasksService.addCategoryCollaborator(req.user.id, dto);
   }
 
   @Get('categories/:id/collaborators')
-  getCategoryCollaborators(@Param('id') id: string, @Request() req) {
-    return this.tasksService.getCategoryCollaborators(+id, req.user.id);
+  getCategoryCollaborators(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.getCategoryCollaborators(id, req.user.id);
   }
 
   @Get('categories/shared')
@@ -138,20 +139,20 @@ export class TasksController {
 
   @Delete('categories/:categoryId/collaborators/:userId')
   removeCategoryCollaborator(
-    @Param('categoryId') categoryId: string,
-    @Param('userId') userId: string,
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+    @Param('userId', ParseIntPipe) userId: number,
     @Request() req,
   ) {
-    return this.tasksService.removeCategoryCollaborator(+categoryId, +userId, req.user.id);
+    return this.tasksService.removeCategoryCollaborator(categoryId, userId, req.user.id);
   }
 
   @Patch('categories/:categoryId/collaborators/:userId')
   updateCategoryCollaboratorRole(
-    @Param('categoryId') categoryId: string,
-    @Param('userId') userId: string,
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+    @Param('userId', ParseIntPipe) userId: number,
     @Body() body: { role: 'viewer' | 'editor' | 'admin' },
     @Request() req,
   ) {
-    return this.tasksService.updateCategoryCollaboratorRole(+categoryId, +userId, body.role as any, req.user.id);
+    return this.tasksService.updateCategoryCollaboratorRole(categoryId, userId, body.role as any, req.user.id);
   }
 }

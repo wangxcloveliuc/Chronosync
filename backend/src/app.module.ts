@@ -9,6 +9,8 @@ import { TasksModule } from './tasks/tasks.module';
 import { User } from './users/entities/user.entity';
 import { Task } from './tasks/entities/task.entity';
 import { Category } from './tasks/entities/category.entity';
+import { TaskShare } from './tasks/entities/task-share.entity';
+import { CategoryCollaborator } from './tasks/entities/category-collaborator.entity';
 
 @Module({
   imports: [
@@ -20,7 +22,7 @@ import { Category } from './tasks/entities/category.entity';
       useFactory: (configService: ConfigService) => ({
         type: 'sqlite',
         database: 'database.sqlite',
-        entities: [User, Task, Category],
+        entities: [User, Task, Category, TaskShare, CategoryCollaborator],
         synchronize: true, // Don't use in production
         logging: false,
       }),
@@ -33,4 +35,4 @@ import { Category } from './tasks/entities/category.entity';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

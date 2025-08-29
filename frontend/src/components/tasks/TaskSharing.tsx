@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { Task, CreateTaskShareData, TaskShare } from '@/types';
 import api from '@/lib/api';
@@ -161,7 +163,7 @@ export const TaskSharing: React.FC<TaskSharingProps> = ({ task, onClose }) => {
                 {shares.map((share) => (
                   <div key={share.id} className="border rounded-lg p-4 bg-gray-50">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-2">
                           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                             share.shareType === 'public_link' 
@@ -181,25 +183,27 @@ export const TaskSharing: React.FC<TaskSharingProps> = ({ task, onClose }) => {
                           </div>
                         )}
                         
-                        <div className="flex items-center space-x-2">
-                          <code className="bg-gray-200 px-2 py-1 rounded text-xs font-mono flex-1 truncate">
+                        <div className="min-w-0">
+                          <code className="bg-gray-200 px-2 py-1 rounded text-xs font-mono block truncate min-w-0 overflow-hidden">
                             {window.location.origin}/public/task/{share.shareToken}
                           </code>
-                          <button
-                            onClick={() => copyToClipboard(share.shareToken)}
-                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Copy
-                          </button>
                         </div>
                       </div>
                       
-                      <button
-                        onClick={() => handleRevokeShare(share.id)}
-                        className="ml-4 text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Revoke
-                      </button>
+                      <div className="ml-4 flex flex-col items-end space-y-2 flex-shrink-0">
+                        <button
+                          onClick={() => copyToClipboard(share.shareToken)}
+                          className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex-shrink-0"
+                        >
+                          Copy
+                        </button>
+                        <button
+                          onClick={() => handleRevokeShare(share.id)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Revoke
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

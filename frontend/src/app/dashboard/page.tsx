@@ -8,12 +8,14 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { StatsCards } from '@/components/tasks/StatsCards';
+import { TaskSharing } from '@/components/tasks/TaskSharing';
 import { Task, TaskStatus, CreateTaskData, UpdateTaskData } from '@/types';
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [sharingTask, setSharingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<{ status?: TaskStatus; search?: string }>({});
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const router = useRouter();
@@ -74,6 +76,10 @@ export default function DashboardPage() {
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setShowTaskForm(true);
+  };
+
+  const handleShareTask = (task: Task) => {
+    setSharingTask(task);
   };
 
   const handleSubmitTask = async (taskData: CreateTaskData | UpdateTaskData) => {
@@ -237,6 +243,7 @@ export default function DashboardPage() {
                     onStatusChange={handleStatusChange}
                     onEdit={handleEditTask}
                     onDelete={handleDeleteTask}
+                    onShare={handleShareTask}
                   />
                 ))}
               </div>
@@ -253,6 +260,14 @@ export default function DashboardPage() {
           categories={categories}
           editTask={editingTask || undefined}
           mode={editingTask ? 'edit' : 'create'}
+        />
+      )}
+
+      {/* Task Sharing Modal */}
+      {sharingTask && (
+        <TaskSharing
+          task={sharingTask}
+          onClose={() => setSharingTask(null)}
         />
       )}
     </div>
