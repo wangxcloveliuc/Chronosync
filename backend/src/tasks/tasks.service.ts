@@ -1,11 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In } from 'typeorm';
 import { Task, TaskStatus } from './entities/task.entity';
 import { Category } from './entities/category.entity';
 import { TaskShare, ShareType } from './entities/task-share.entity';
 import { CategoryCollaborator, CollaboratorRole } from './entities/category-collaborator.entity';
-import { CreateTaskDto, UpdateTaskDto, CreateCategoryDto, UpdateCategoryDto, CreateTaskShareDto, CreateCategoryCollaboratorDto } from './dto/task.dto';
+import { TaskTag } from './entities/task-tag.entity';
+import { TaskDependency, DependencyType } from './entities/task-dependency.entity';
+import { CreateTaskDto, UpdateTaskDto, CreateCategoryDto, UpdateCategoryDto, CreateTaskShareDto, CreateCategoryCollaboratorDto, CreateTaskDependencyDto, CreateTaskTagDto, UpdateTaskTagDto } from './dto/task.dto';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -19,27 +21,62 @@ export class TasksService {
     private readonly taskShareRepository: Repository<TaskShare>,
     @InjectRepository(CategoryCollaborator)
     private readonly categoryCollaboratorRepository: Repository<CategoryCollaborator>,
+    @InjectRepository(TaskTag)
+    private readonly taskTagRepository: Repository<TaskTag>,
+    @InjectRepository(TaskDependency)
+    private readonly taskDependencyRepository: Repository<TaskDependency>,
   ) {}
 
   async createTask(userId: number, createTaskDto: CreateTaskDto): Promise<Task> {
+    // Validate parent task ownership if parentTaskId is provided
+    if (createTaskDto.parentTaskId) {
+      const parentTask = await this.findTaskById(createTaskDto.parentTaskId, userId);
+      if (!parentTask) {
+        throw new NotFoundException('Parent task not found');
+      }
+    }
+
+    // Handle tags
+    let tags: TaskTag[] = [];
+    if (createTaskDto.tags && createTaskDto.tags.length > 0) {
+      tags = await this.getOrCreateTags(createTaskDto.tags);
+    }
+
     const task = this.taskRepository.create({
       ...createTaskDto,
       userId,
       dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : undefined,
       reminderTime: createTaskDto.reminderTime ? new Date(createTaskDto.reminderTime) : undefined,
+      tags,
     });
-    return this.taskRepository.save(task);
+
+    const savedTask = await this.taskRepository.save(task);
+
+    // Update parent task progress if this is a sub-task
+    if (createTaskDto.parentTaskId) {
+      await this.updateParentTaskProgress(createTaskDto.parentTaskId);
+    }
+
+    return this.findTaskById(savedTask.id, userId);
   }
 
   async findAllTasks(
     userId: number,
     status?: TaskStatus,
     categoryId?: number,
-    search?: string
+    search?: string,
+    tags?: string[]
   ): Promise<Task[]> {
     const query = this.taskRepository
       .createQueryBuilder('task')
       .leftJoinAndSelect('task.category', 'category')
+      .leftJoinAndSelect('task.tags', 'tags')
+      .leftJoinAndSelect('task.parentTask', 'parentTask')
+      .leftJoinAndSelect('task.subTasks', 'subTasks')
+      .leftJoinAndSelect('task.predecessorDependencies', 'predecessorDeps')
+      .leftJoinAndSelect('predecessorDeps.predecessorTask', 'predecessorTask')
+      .leftJoinAndSelect('task.successorDependencies', 'successorDeps')
+      .leftJoinAndSelect('successorDeps.successorTask', 'successorTask')
       .where('task.userId = :userId', { userId });
 
     if (status) {
@@ -57,13 +94,26 @@ export class TasksService {
       );
     }
 
+    if (tags && tags.length > 0) {
+      query.andWhere('tags.name IN (:...tags)', { tags });
+    }
+
     return query.orderBy('task.createdAt', 'DESC').getMany();
   }
 
   async findTaskById(id: number, userId: number): Promise<Task> {
     const task = await this.taskRepository.findOne({
       where: { id, userId },
-      relations: ['category'],
+      relations: [
+        'category', 
+        'tags', 
+        'parentTask', 
+        'subTasks', 
+        'predecessorDependencies', 
+        'predecessorDependencies.predecessorTask',
+        'successorDependencies',
+        'successorDependencies.successorTask'
+      ],
     });
 
     if (!task) {
@@ -76,6 +126,22 @@ export class TasksService {
   async updateTask(id: number, userId: number, updateTaskDto: UpdateTaskDto): Promise<Task> {
     const task = await this.findTaskById(id, userId);
     
+    // Validate parent task ownership if parentTaskId is being updated
+    if (updateTaskDto.parentTaskId && updateTaskDto.parentTaskId !== task.parentTaskId) {
+      const parentTask = await this.findTaskById(updateTaskDto.parentTaskId, userId);
+      if (!parentTask) {
+        throw new NotFoundException('Parent task not found');
+      }
+    }
+
+    // Check dependency constraints before updating status
+    if (updateTaskDto.status && updateTaskDto.status !== task.status) {
+      const canUpdateStatus = await this.canUpdateTaskStatus(id, updateTaskDto.status);
+      if (!canUpdateStatus) {
+        throw new BadRequestException('Cannot update task status due to dependency constraints');
+      }
+    }
+
     const updateData: any = { ...updateTaskDto };
     
     if (updateTaskDto.dueDate) {
@@ -92,13 +158,114 @@ export class TasksService {
       updateData.completedAt = null;
     }
 
+    // Handle tags update
+    if (updateTaskDto.tags !== undefined) {
+      const tags = updateTaskDto.tags.length > 0 ? await this.getOrCreateTags(updateTaskDto.tags) : [];
+      await this.taskRepository.save({ ...task, tags });
+    }
+
+    // Remove tags from update data to avoid TypeORM issues
+    delete updateData.tags;
+
     await this.taskRepository.update(id, updateData);
+
+    // Update parent task progress if status changed or if parent task changed
+    if (updateTaskDto.status || updateTaskDto.parentTaskId) {
+      if (task.parentTaskId) {
+        await this.updateParentTaskProgress(task.parentTaskId);
+      }
+      if (updateTaskDto.parentTaskId && updateTaskDto.parentTaskId !== task.parentTaskId) {
+        await this.updateParentTaskProgress(updateTaskDto.parentTaskId);
+      }
+    }
+
     return this.findTaskById(id, userId);
   }
 
   async deleteTask(id: number, userId: number): Promise<void> {
     const task = await this.findTaskById(id, userId);
+    
+    // Update parent task progress if this was a sub-task
+    if (task.parentTaskId) {
+      await this.updateParentTaskProgress(task.parentTaskId);
+    }
+    
     await this.taskRepository.remove(task);
+  }
+
+  // Helper method to get or create tags
+  private async getOrCreateTags(tagNames: string[]): Promise<TaskTag[]> {
+    const tags: TaskTag[] = [];
+    
+    for (const tagName of tagNames) {
+      let tag = await this.taskTagRepository.findOne({ where: { name: tagName } });
+      
+      if (!tag) {
+        tag = this.taskTagRepository.create({ name: tagName });
+        tag = await this.taskTagRepository.save(tag);
+      }
+      
+      tags.push(tag);
+    }
+    
+    return tags;
+  }
+
+  // Helper method to update parent task progress
+  private async updateParentTaskProgress(parentTaskId: number): Promise<void> {
+    const parentTask = await this.taskRepository.findOne({
+      where: { id: parentTaskId },
+      relations: ['subTasks']
+    });
+
+    if (!parentTask || !parentTask.subTasks) {
+      return;
+    }
+
+    const totalSubTasks = parentTask.subTasks.length;
+    if (totalSubTasks === 0) {
+      return;
+    }
+
+    const completedSubTasks = parentTask.subTasks.filter(
+      subTask => subTask.status === TaskStatus.COMPLETED
+    ).length;
+
+    const progress = Math.round((completedSubTasks / totalSubTasks) * 100);
+    
+    // If all sub-tasks are completed, mark parent as completed
+    const newStatus = completedSubTasks === totalSubTasks ? TaskStatus.COMPLETED : 
+                     completedSubTasks > 0 ? TaskStatus.IN_PROGRESS : TaskStatus.TODO;
+
+    await this.taskRepository.update(parentTaskId, { 
+      progress,
+      status: newStatus,
+      completedAt: newStatus === TaskStatus.COMPLETED ? new Date() : null
+    });
+  }
+
+  // Helper method to check if task status can be updated based on dependencies
+  private async canUpdateTaskStatus(taskId: number, newStatus: TaskStatus): Promise<boolean> {
+    if (newStatus === TaskStatus.TODO) {
+      return true; // Can always revert to TODO
+    }
+
+    // Check if all predecessor tasks are completed for IN_PROGRESS or COMPLETED status
+    const predecessorDependencies = await this.taskDependencyRepository.find({
+      where: { successorTaskId: taskId },
+      relations: ['predecessorTask']
+    });
+
+    for (const dependency of predecessorDependencies) {
+      if (dependency.dependencyType === DependencyType.FINISH_TO_START || 
+          dependency.dependencyType === DependencyType.FINISH_TO_FINISH) {
+        if (dependency.predecessorTask.status !== TaskStatus.COMPLETED) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   async getTaskStats(userId: number, startDate?: Date, endDate?: Date) {
@@ -397,5 +564,191 @@ export class TasksService {
     }
 
     return updatedCollaborator;
+  }
+
+  // Task Tag Management
+  async createTaskTag(createTaskTagDto: CreateTaskTagDto): Promise<TaskTag> {
+    const existingTag = await this.taskTagRepository.findOne({
+      where: { name: createTaskTagDto.name }
+    });
+
+    if (existingTag) {
+      throw new BadRequestException('Tag with this name already exists');
+    }
+
+    const tag = this.taskTagRepository.create(createTaskTagDto);
+    return this.taskTagRepository.save(tag);
+  }
+
+  async getAllTaskTags(): Promise<TaskTag[]> {
+    return this.taskTagRepository.find({
+      order: { name: 'ASC' }
+    });
+  }
+
+  async updateTaskTag(id: number, updateTaskTagDto: UpdateTaskTagDto): Promise<TaskTag> {
+    const tag = await this.taskTagRepository.findOne({ where: { id } });
+    
+    if (!tag) {
+      throw new NotFoundException('Tag not found');
+    }
+
+    if (updateTaskTagDto.name && updateTaskTagDto.name !== tag.name) {
+      const existingTag = await this.taskTagRepository.findOne({
+        where: { name: updateTaskTagDto.name }
+      });
+      
+      if (existingTag) {
+        throw new BadRequestException('Tag with this name already exists');
+      }
+    }
+
+    await this.taskTagRepository.update(id, updateTaskTagDto);
+    const updatedTag = await this.taskTagRepository.findOne({ where: { id } });
+    if (!updatedTag) {
+      throw new NotFoundException('Tag not found after update');
+    }
+    return updatedTag;
+  }
+
+  async deleteTaskTag(id: number): Promise<void> {
+    const tag = await this.taskTagRepository.findOne({ where: { id } });
+    
+    if (!tag) {
+      throw new NotFoundException('Tag not found');
+    }
+
+    await this.taskTagRepository.remove(tag);
+  }
+
+  // Task Dependency Management
+  async createTaskDependency(userId: number, createTaskDependencyDto: CreateTaskDependencyDto): Promise<TaskDependency> {
+    // Validate that both tasks exist and belong to the user
+    const [predecessorTask, successorTask] = await Promise.all([
+      this.findTaskById(createTaskDependencyDto.predecessorTaskId, userId),
+      this.findTaskById(createTaskDependencyDto.successorTaskId, userId)
+    ]);
+
+    if (!predecessorTask || !successorTask) {
+      throw new NotFoundException('One or both tasks not found');
+    }
+
+    if (predecessorTask.id === successorTask.id) {
+      throw new BadRequestException('A task cannot depend on itself');
+    }
+
+    // Check for existing dependency
+    const existingDependency = await this.taskDependencyRepository.findOne({
+      where: {
+        predecessorTaskId: createTaskDependencyDto.predecessorTaskId,
+        successorTaskId: createTaskDependencyDto.successorTaskId
+      }
+    });
+
+    if (existingDependency) {
+      throw new BadRequestException('Dependency already exists between these tasks');
+    }
+
+    // Check for circular dependencies
+    const wouldCreateCircle = await this.wouldCreateCircularDependency(
+      createTaskDependencyDto.predecessorTaskId,
+      createTaskDependencyDto.successorTaskId
+    );
+
+    if (wouldCreateCircle) {
+      throw new BadRequestException('This dependency would create a circular dependency');
+    }
+
+    const dependency = this.taskDependencyRepository.create(createTaskDependencyDto);
+    return this.taskDependencyRepository.save(dependency);
+  }
+
+  async getTaskDependencies(taskId: number, userId: number): Promise<{
+    predecessors: TaskDependency[];
+    successors: TaskDependency[];
+  }> {
+    // Verify task ownership
+    await this.findTaskById(taskId, userId);
+
+    const [predecessors, successors] = await Promise.all([
+      this.taskDependencyRepository.find({
+        where: { successorTaskId: taskId },
+        relations: ['predecessorTask']
+      }),
+      this.taskDependencyRepository.find({
+        where: { predecessorTaskId: taskId },
+        relations: ['successorTask']
+      })
+    ]);
+
+    return { predecessors, successors };
+  }
+
+  async deleteTaskDependency(dependencyId: number, userId: number): Promise<void> {
+    const dependency = await this.taskDependencyRepository.findOne({
+      where: { id: dependencyId },
+      relations: ['predecessorTask', 'successorTask']
+    });
+
+    if (!dependency) {
+      throw new NotFoundException('Dependency not found');
+    }
+
+    // Verify that the user owns both tasks in the dependency
+    await Promise.all([
+      this.findTaskById(dependency.predecessorTaskId, userId),
+      this.findTaskById(dependency.successorTaskId, userId)
+    ]);
+
+    await this.taskDependencyRepository.remove(dependency);
+  }
+
+  // Helper method to check for circular dependencies
+  private async wouldCreateCircularDependency(predecessorId: number, successorId: number): Promise<boolean> {
+    // Use a simple DFS to check if there's already a path from successor to predecessor
+    const visited = new Set<number>();
+    const stack = [successorId];
+
+    while (stack.length > 0) {
+      const currentId = stack.pop();
+      
+      if (!currentId) {
+        continue;
+      }
+      
+      if (currentId === predecessorId) {
+        return true; // Found a cycle
+      }
+
+      if (visited.has(currentId)) {
+        continue;
+      }
+
+      visited.add(currentId);
+
+      // Get all successors of the current task
+      const dependencies = await this.taskDependencyRepository.find({
+        where: { predecessorTaskId: currentId }
+      });
+
+      for (const dep of dependencies) {
+        if (!visited.has(dep.successorTaskId)) {
+          stack.push(dep.successorTaskId);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  // Get sub-tasks for a parent task
+  async getSubTasks(parentTaskId: number, userId: number): Promise<Task[]> {
+    // Verify parent task ownership
+    await this.findTaskById(parentTaskId, userId);
+
+    return this.taskRepository.find({
+      where: { parentTaskId, userId },
+      relations: ['category', 'tags', 'subTasks']
+    });
   }
 }

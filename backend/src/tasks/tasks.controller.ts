@@ -12,7 +12,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto, UpdateTaskDto, CreateCategoryDto, UpdateCategoryDto, CreateTaskShareDto, CreateCategoryCollaboratorDto } from './dto/task.dto';
+import { CreateTaskDto, UpdateTaskDto, CreateCategoryDto, UpdateCategoryDto, CreateTaskShareDto, CreateCategoryCollaboratorDto, CreateTaskDependencyDto, CreateTaskTagDto, UpdateTaskTagDto } from './dto/task.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TaskStatus } from './entities/task.entity';
 
@@ -32,8 +32,10 @@ export class TasksController {
     @Query('status') status?: TaskStatus,
     @Query('categoryId') categoryId?: number,
     @Query('search') search?: string,
+    @Query('tags') tags?: string,
   ) {
-    return this.tasksService.findAllTasks(req.user.id, status, categoryId, search);
+    const tagArray = tags ? tags.split(',').map(tag => tag.trim()) : undefined;
+    return this.tasksService.findAllTasks(req.user.id, status, categoryId, search, tagArray);
   }
 
   @Get('stats')
@@ -154,5 +156,62 @@ export class TasksController {
     @Request() req,
   ) {
     return this.tasksService.updateCategoryCollaboratorRole(categoryId, userId, body.role as any, req.user.id);
+  }
+
+  // Task Tag endpoints
+  @Post('tags')
+  createTaskTag(@Body() createTaskTagDto: CreateTaskTagDto) {
+    return this.tasksService.createTaskTag(createTaskTagDto);
+  }
+
+  @Get('tags')
+  getAllTaskTags() {
+    return this.tasksService.getAllTaskTags();
+  }
+
+  @Patch('tags/:id')
+  updateTaskTag(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateTaskTagDto: UpdateTaskTagDto,
+  ) {
+    return this.tasksService.updateTaskTag(id, updateTaskTagDto);
+  }
+
+  @Delete('tags/:id')
+  deleteTaskTag(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.deleteTaskTag(id);
+  }
+
+  // Task Dependency endpoints
+  @Post(':id/dependencies')
+  createTaskDependency(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+    @Body() createTaskDependencyDto: CreateTaskDependencyDto,
+  ) {
+    // Ensure the task ID matches either predecessor or successor
+    if (createTaskDependencyDto.predecessorTaskId !== id && createTaskDependencyDto.successorTaskId !== id) {
+      createTaskDependencyDto.successorTaskId = id;
+    }
+    return this.tasksService.createTaskDependency(req.user.id, createTaskDependencyDto);
+  }
+
+  @Get(':id/dependencies')
+  getTaskDependencies(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.getTaskDependencies(id, req.user.id);
+  }
+
+  @Delete('dependencies/:dependencyId')
+  deleteTaskDependency(
+    @Param('dependencyId', ParseIntPipe) dependencyId: number,
+    @Request() req,
+  ) {
+    return this.tasksService.deleteTaskDependency(dependencyId, req.user.id);
+  }
+
+  // Sub-task endpoints
+  @Get(':id/sub-tasks')
+  getSubTasks(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.tasksService.getSubTasks(id, req.user.id);
   }
 }

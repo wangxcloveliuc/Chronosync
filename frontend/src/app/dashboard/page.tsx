@@ -9,6 +9,9 @@ import { TaskCard } from '@/components/tasks/TaskCard';
 import { TaskForm } from '@/components/tasks/TaskForm';
 import { StatsCards } from '@/components/tasks/StatsCards';
 import { TaskSharing } from '@/components/tasks/TaskSharing';
+import { TaskTagManager } from '@/components/tasks/TaskTagManager';
+import { TaskDependencyManager } from '@/components/tasks/TaskDependencyManager';
+import { SubTaskViewer } from '@/components/tasks/SubTaskViewer';
 import { Task, TaskStatus, CreateTaskData, UpdateTaskData } from '@/types';
 
 export default function DashboardPage() {
@@ -16,13 +19,18 @@ export default function DashboardPage() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sharingTask, setSharingTask] = useState<Task | null>(null);
-  const [filter, setFilter] = useState<{ status?: TaskStatus; search?: string }>({});
+  const [subTaskViewTask, setSubTaskViewTask] = useState<Task | null>(null);
+  const [dependencyManageTask, setDependencyManageTask] = useState<Task | null>(null);
+  const [showTagManager, setShowTagManager] = useState(false);
+  const [filter, setFilter] = useState<{ status?: TaskStatus; search?: string; tags?: string[] }>({});
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const router = useRouter();
 
   const {
     tasks,
     categories,
+    tags,
     stats,
     loading: tasksLoading,
     error,
@@ -103,6 +111,21 @@ export default function DashboardPage() {
     setFilter(prev => ({ ...prev, status }));
   };
 
+  const handleTagFilter = (tagName: string) => {
+    setSelectedTags(prev => {
+      const newTags = prev.includes(tagName) 
+        ? prev.filter(t => t !== tagName)
+        : [...prev, tagName];
+      setFilter(prevFilter => ({ ...prevFilter, tags: newTags }));
+      return newTags;
+    });
+  };
+
+  const clearTagFilters = () => {
+    setSelectedTags([]);
+    setFilter(prev => ({ ...prev, tags: [] }));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -178,6 +201,13 @@ export default function DashboardPage() {
                   + New Task
                 </button>
                 
+                <button
+                  onClick={() => setShowTagManager(true)}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  Manage Tags
+                </button>
+                
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleStatusFilter()}
@@ -216,6 +246,41 @@ export default function DashboardPage() {
                 />
               </div>
             </div>
+
+            {/* Tag Filters */}
+            {tags.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">Filter by Tags:</h3>
+                  {selectedTags.length > 0 && (
+                    <button
+                      onClick={clearTagFilters}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <button
+                      key={tag.id}
+                      onClick={() => handleTagFilter(tag.name)}
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedTags.includes(tag.name)
+                          ? 'text-white'
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                      }`}
+                      style={{
+                        backgroundColor: selectedTags.includes(tag.name) ? tag.color || '#3B82F6' : undefined
+                      }}
+                    >
+                      #{tag.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Task List */}
@@ -228,7 +293,7 @@ export default function DashboardPage() {
               <div className="text-center py-8">
                 <div className="text-lg text-gray-500 mb-2">No tasks found</div>
                 <p className="text-gray-400">
-                  {filter.status || filter.search 
+                  {filter.status || filter.search || (filter.tags && filter.tags.length > 0)
                     ? 'Try adjusting your filters or search term.'
                     : 'Create your first task to get started!'
                   }
@@ -244,6 +309,8 @@ export default function DashboardPage() {
                     onEdit={handleEditTask}
                     onDelete={handleDeleteTask}
                     onShare={handleShareTask}
+                    onViewSubTasks={(task) => setSubTaskViewTask(task)}
+                    onManageDependencies={(task) => setDependencyManageTask(task)}
                   />
                 ))}
               </div>
@@ -258,6 +325,8 @@ export default function DashboardPage() {
           onSubmit={handleSubmitTask}
           onCancel={handleCancelForm}
           categories={categories}
+          tasks={tasks}
+          tags={tags}
           editTask={editingTask || undefined}
           mode={editingTask ? 'edit' : 'create'}
         />
@@ -268,6 +337,29 @@ export default function DashboardPage() {
         <TaskSharing
           task={sharingTask}
           onClose={() => setSharingTask(null)}
+        />
+      )}
+
+      {/* Tag Manager Modal */}
+      {showTagManager && (
+        <TaskTagManager
+          onClose={() => setShowTagManager(false)}
+        />
+      )}
+
+      {/* Sub-task Viewer Modal */}
+      {subTaskViewTask && (
+        <SubTaskViewer
+          parentTask={subTaskViewTask}
+          onClose={() => setSubTaskViewTask(null)}
+        />
+      )}
+
+      {/* Dependency Manager Modal */}
+      {dependencyManageTask && (
+        <TaskDependencyManager
+          task={dependencyManageTask}
+          onClose={() => setDependencyManageTask(null)}
         />
       )}
     </div>

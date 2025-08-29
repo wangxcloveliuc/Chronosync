@@ -14,7 +14,7 @@ export const TaskSharing: React.FC<TaskSharingProps> = ({ task, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [shareType, setShareType] = useState<'public_link' | 'user_share'>('public_link');
   const [sharedWithEmail, setSharedWithEmail] = useState('');
-  const [foundUser, setFoundUser] = useState<any | null>(null);
+  const [foundUser, setFoundUser] = useState<{ id: number; email: string; nickname: string } | null>(null);
   const [expiresAt, setExpiresAt] = useState('');
 
   const loadShares = async () => {
