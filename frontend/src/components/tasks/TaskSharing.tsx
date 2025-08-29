@@ -14,6 +14,7 @@ export const TaskSharing: React.FC<TaskSharingProps> = ({ task, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [shareType, setShareType] = useState<'public_link' | 'user_share'>('public_link');
   const [sharedWithEmail, setSharedWithEmail] = useState('');
+  const [foundUser, setFoundUser] = useState<any | null>(null);
   const [expiresAt, setExpiresAt] = useState('');
 
   const loadShares = async () => {
@@ -40,12 +41,14 @@ export const TaskSharing: React.FC<TaskSharingProps> = ({ task, onClose }) => {
         expiresAt: expiresAt || undefined,
       };
 
-      // For user sharing, we'd need to look up user by email
-      // For now, just implement public link sharing
+      // If user share, ensure we have a target user id
       if (shareType === 'user_share') {
-        alert('User sharing feature coming soon! Please use public link for now.');
-        setLoading(false);
-        return;
+        if (!foundUser) {
+          alert('Please lookup a user by email before sharing.');
+          setLoading(false);
+          return;
+        }
+        shareData.sharedWithUserId = foundUser.id;
       }
 
       const response = await api.post(`/tasks/${task.id}/share`, shareData);
@@ -120,11 +123,44 @@ export const TaskSharing: React.FC<TaskSharingProps> = ({ task, onClose }) => {
                   <input
                     type="email"
                     value={sharedWithEmail}
-                    onChange={(e) => setSharedWithEmail(e.target.value)}
+                    onChange={(e) => {
+                      setSharedWithEmail(e.target.value);
+                      setFoundUser(null);
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter user email"
-                    disabled
+                    
                   />
+
+                  <div className="mt-2 flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!sharedWithEmail) return alert('Enter an email to search');
+                        try {
+                          const res = await api.get(`/users/by-email`, { params: { email: sharedWithEmail } });
+                          if (!res.data) {
+                            setFoundUser(null);
+                            alert('User not found');
+                          } else {
+                            setFoundUser(res.data);
+                          }
+                        } catch (err) {
+                          console.error('Lookup error', err);
+                          alert('Failed to lookup user');
+                        }
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                    >
+                      Lookup
+                    </button>
+
+                    {foundUser ? (
+                      <div className="text-sm text-gray-700">Found: {foundUser.email} ({foundUser.nickname || '—'})</div>
+                    ) : (
+                      <div className="text-sm text-gray-500">No user selected</div>
+                    )}
+                  </div>
                 </div>
               )}
 
